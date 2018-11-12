@@ -19,7 +19,7 @@ _main PROC
 	mov edi, offset result
 processing:
 	mov bx, 0
-	mov al, [esi]
+	mov al, [esi]	;kolejny bajt z bufora
 	rcl al, 1	; czy 1-bajtowa liczba
 	jc multibyte_character
 ascii_character:
@@ -29,18 +29,24 @@ ascii_character:
 	dec ecx
 	jmp ready
 multibyte_character:
-	rcr al, 2
+	rcl al, 2
 	jc tribytes_character
 	rcr al, 3
 	and  al, 00011111B
+	mov bl, al
+	shl bx, 6	; zostanie w bl xx000000 aby w to miejsce kolejne x z mlodszego bajtu
+	mov al, [esi+1]
+	and al, 00111111b
 	or bl, al
 	add esi, 2
 	sub ecx, 2
 	jmp ready
 tribytes_character:	;zaczynam od srodkowego bajtu
-	rcr al, 3
-	mov al, [esi+2]
-	and al, 00111111B
+	rcr al, 3	;aby przywrocic pierwotny stan bajtu z bufora
+	mov bh, [esi+1]	; srodkowy bajt
+	and bh, 00111111B	; zerowanie preambuly 10xxxxxx
+	shr bx, 2
+	and al, 00001111b
 	shl al, 4
 	or bh, al
 	mov al, [esi+2]
@@ -60,7 +66,7 @@ ready:
 	push offset result
 	push 0
 	call _MessageBoxW@16
-	edd esp, 16
+	add esp, 16
 
 	push 0
 	call _ExitProcess@4
